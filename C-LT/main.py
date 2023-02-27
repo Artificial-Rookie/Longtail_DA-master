@@ -248,7 +248,7 @@ def train(train_loader, model, optimizer_a, epoch): # pre-training
 
         losses.update(l_f.item(), input.size(0))
         """
-        # check loss
+        # check loss5
         # if 0 in target:
         if losses.val > 100:
             print(target)
