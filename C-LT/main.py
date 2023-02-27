@@ -243,8 +243,8 @@ def train(train_loader, model, optimizer_a, epoch): # pre-training
         y_f = model(input_var)
         cost_w = F.cross_entropy(y_f, target_var, reduce=None)
         l_f = torch.mean(cost_w) # * w)
-        prec_train, pred = accuracy(y_f.data, target_var.data, topk=(1,))[0]
-
+        prec_train, pred = accuracy(y_f.data, target_var.data, topk=(1,))
+        prec_train = prec_train[0]
 
         losses.update(l_f.item(), input.size(0))
         """
