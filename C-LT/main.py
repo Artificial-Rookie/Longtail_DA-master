@@ -273,23 +273,6 @@ def train(train_loader, model, optimizer_a, epoch): # pre-training
         prec_train = accuracy(y_f.data, target_var.data, topk=(1,))[0]
 
         losses.update(l_f.item(), input.size(0))
-        """
-        # check loss5
-        # if 0 in target:
-        if losses.val > 100:
-            print(target)
-            std = [63.0, 62.1, 66.7]
-            mean = [125.3, 123.0, 113.9]
-            for j in range(len(input)):
-                im = input.numpy()[j]
-                for k in range(3):
-                    im[k] = im[k] * std[k] + mean[k]
-                im = im * 255
-                im = im.astype(np.uint8).transpose(1,2,0)
-                im = Image.fromarray(im)
-                im.save(f"/home/chengru/github/Longtail_DA-master/output/{j}.jpg")
-            raise Exception("loss too big")
-        """
         #meta_losses.update(l_g_meta.item(), input.size(0))
         top1.update(prec_train.item(), input.size(0))
         #meta_top1.update(prec_meta.item(), input.size(0))
@@ -303,6 +286,18 @@ def train(train_loader, model, optimizer_a, epoch): # pre-training
                 epoch, i, len(train_loader), loss=losses,top1=top1,target=target, pred=y_f)
             with open("/home/chengru/github/Longtail_DA-master/info.txt", 'a') as file:
                 file.write(information)
+            # save the problem images
+            std = [63.0, 62.1, 66.7]
+            mean = [125.3, 123.0, 113.9]
+            for j in range(len(input)):
+                im = input.numpy()[j]
+                for k in range(3):
+                    im[k] = im[k] * std[k] + mean[k]
+                im = im * 255
+                im = im.astype(np.uint8).transpose(1,2,0)
+                im = Image.fromarray(im)
+                im.save(f"/home/chengru/github/Longtail_DA-master/output/{j}.jpg")
+            raise Exception("loss too big")
 
         if i % args.print_freq == 0:
             print('Epoch: [{0}][{1}/{2}]\tLoss {loss.val:.4f} ({loss.avg:.4f})\tPrec@1 {top1.val:.3f} ({top1.avg:.3f})'.format(
