@@ -136,7 +136,7 @@ else:
     _, img_num_list = count_data(path="/home/chengru/github/Longtail_DA-master/bdd100k/train_day.json")
     # for i in range(len(img_num_list)):
     #     if img_num_list[i] >= 2000:
-    #         img_num_list[i] -= 2000
+    #         img_num_list[i] -= 2000 
     # imbalanced_train_dataset = curation(train_data, img_num_list, args.num_classes, keep_rate)
     imbalanced_train_loader = torch.utils.data.DataLoader(
         imbalanced_train_dataset, batch_size=args.batch_size, shuffle=True, **kwargs)

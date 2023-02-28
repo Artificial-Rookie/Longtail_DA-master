@@ -60,7 +60,7 @@ def build_dataset(dataset,num_meta):
                 img_num_list[i] = num_each[i]
 
         # train_data, train_data_meta = curation(copy.deepcopy(train_dataset), img_num_list, num_classes, keep_rate)
-        # return train_data_meta,train_data,test_dataset 
+        # return train_data_meta,train_data,test_dataset  
 
 
     data_list_val = {}
