@@ -22,12 +22,12 @@ from PIL import Image
 
 # parse arguments
 parser = argparse.ArgumentParser(description='Imbalanced Example')
-parser.add_argument('--dataset', default='bdd100k', type=str,
+parser.add_argument('--dataset', default='cifar10', type=str,
                     help='dataset (bdd100k or cifar10 or cifar100)')
 parser.add_argument('--batch-size', type=int, default=32, metavar='N',
                     help='input batch size for training (default: 64)')
 parser.add_argument('--num_classes', type=int, default=10)
-parser.add_argument('--num_meta', type=int, default=2000, # the sample number for validation each class
+parser.add_argument('--num_meta', type=int, default=10, # the sample number for validation each class
                     help='The number of meta data for each class.')
 parser.add_argument('--imb_factor', type=float, default=0.1)        # img_min/img_max
 parser.add_argument('--test-batch-size', type=int, default=100, metavar='N',
@@ -71,21 +71,31 @@ train_data_meta,train_data,test_dataset,train_dataset = build_dataset(args.datas
 set_seed(42)
 train_loader = torch.utils.data.DataLoader(
     train_data, batch_size=args.batch_size, shuffle=True, **kwargs) # remaining set
-
+"""
+the algorithm first split out the meta data (balanced set): train_data_meta in data_utils.py,
+and get: train_data (train_loadrer here)
+then create the imbalance problem with train_data,
+and get the remaining set: imbalanced_train_dataset
+"""
 set_seed(42)
 full_train_loader = torch.utils.data.DataLoader(
-    train_dataset, batch_size=args.batch_size, shuffle=True, **kwargs)  # full training set
-
+    train_dataset, batch_size=args.batch_size, shuffle=True, **kwargs)  # full training set without imbalance factor
 
 # make imbalanced data
 torch.manual_seed(args.seed)
 classe_labels = range(args.num_classes)
 
+full_data = True    # full_data is true when run the code only using first stage with full dataset, else it's two stage
 if args.dataset != "bdd100k":
-    data_list = {}
-    for j in range(args.num_classes):
-        data_list[j] = [i for i, label in enumerate(train_loader.dataset.targets) if label == j]
-        # relate the class label and class id in data list
+    if full_data:
+        data_list = {}
+        for j in range(args.num_classes):
+            data_list[j] = [i for i, label in enumerate(full_train_loader.dataset.targets) if label == j]
+            # relate the class label and class id in data list
+    else:
+        data_list = {}
+        for j in range(args.num_classes):
+            data_list[j] = [i for i, label in enumerate(train_loader.dataset.targets) if label == j]
 
     img_num_list = get_img_num_per_cls(args.dataset,args.imb_factor,args.num_meta*args.num_classes)
     # getting the image number of each class after imbalance operation, the dataset follows exponential distribution
@@ -102,15 +112,32 @@ if args.dataset != "bdd100k":
         idx_to_del.extend(img_id_list[img_num:])
 
     print(len(idx_to_del))
-
-    imbalanced_train_dataset = copy.deepcopy(train_data)
-    imbalanced_train_dataset.targets = np.delete(train_loader.dataset.targets, idx_to_del, axis=0)
-    imbalanced_train_dataset.data = np.delete(train_loader.dataset.data, idx_to_del, axis=0)
-    imbalanced_train_loader = torch.utils.data.DataLoader(
-        imbalanced_train_dataset, batch_size=args.batch_size, shuffle=True, **kwargs)
+    
+    if full_data:
+        imbalanced_train_dataset = copy.deepcopy(train_dataset)
+        imbalanced_train_dataset.targets = np.delete(full_train_loader.dataset.targets, idx_to_del, axis=0)
+        imbalanced_train_dataset.data = np.delete(full_train_loader.dataset.data, idx_to_del, axis=0) 
+        imbalanced_train_loader = torch.utils.data.DataLoader(
+            imbalanced_train_dataset, batch_size=args.batch_size, shuffle=True, **kwargs)
+    else:
+        imbalanced_train_dataset = copy.deepcopy(train_data)    # train_data is the full dataset in the cifar10 case
+        imbalanced_train_dataset.targets = np.delete(train_loader.dataset.targets, idx_to_del, axis=0)
+        imbalanced_train_dataset.data = np.delete(train_loader.dataset.data, idx_to_del, axis=0)    # make cifar10 imbalanced
+        imbalanced_train_loader = torch.utils.data.DataLoader(
+            imbalanced_train_dataset, batch_size=args.batch_size, shuffle=True, **kwargs)
+    """
+    if full_data=False
+        imbalanced_train_loader is the remaining dataset (without balanced set)
+    else if full_data=True
+        imbalanced_train_loader is the full dataset (curated by imbalance factor)
+    """
 else:
-    keep_rate, img_num_list = count_data(path="/home/chengru/github/Longtail_DA-master/bdd100k/train_day.json")
-    imbalanced_train_dataset = curation(train_data, img_num_list, args.num_classes, keep_rate)
+    imbalanced_train_dataset = copy.deepcopy(train_data)
+    _, img_num_list = count_data(path="/home/chengru/github/Longtail_DA-master/bdd100k/train_day.json")
+    # for i in range(len(img_num_list)):
+    #     if img_num_list[i] >= 2000:
+    #         img_num_list[i] -= 2000
+    # imbalanced_train_dataset = curation(train_data, img_num_list, args.num_classes, keep_rate)
     imbalanced_train_loader = torch.utils.data.DataLoader(
         imbalanced_train_dataset, batch_size=args.batch_size, shuffle=True, **kwargs)
 
@@ -193,7 +220,7 @@ def main():
         if epoch < 200: # 160, default max_epoch is 200, this controls when to start the second stage
         # 160 epochs for the first stage of training, getting better initialization for theta
 
-          train(full_train_loader, model, optimizer_a,epoch)
+          train(imbalanced_train_loader, model, optimizer_a,epoch)
 
         else:
           train_meta(imbalanced_train_loader, validation_loader, model, optimizer_a, epoch)
@@ -243,8 +270,7 @@ def train(train_loader, model, optimizer_a, epoch): # pre-training
         y_f = model(input_var)
         cost_w = F.cross_entropy(y_f, target_var, reduce=None)
         l_f = torch.mean(cost_w) # * w)
-        prec_train, pred = accuracy(y_f.data, target_var.data, topk=(1,))
-        prec_train = prec_train[0]
+        prec_train = accuracy(y_f.data, target_var.data, topk=(1,))[0]
 
         losses.update(l_f.item(), input.size(0))
         """
@@ -274,7 +300,7 @@ def train(train_loader, model, optimizer_a, epoch): # pre-training
 
         if losses.val > 100:
             information = 'Epoch: [{0}][{1}/{2}]\tLoss {loss.val:.4f} ({loss.avg:.4f})\tPrec@1 {top1.val:.3f} ({top1.avg:.3f})\ttarget: {target}\tpred: {pred}\n'.format(
-                epoch, i, len(train_loader), loss=losses,top1=top1,target=target, pred=pred)
+                epoch, i, len(train_loader), loss=losses,top1=top1,target=target, pred=y_f)
             with open("/home/chengru/github/Longtail_DA-master/info.txt", 'a') as file:
                 file.write(information)
 
@@ -520,7 +546,7 @@ def accuracy(output, target, topk=(1,)):
     for k in topk:
         correct_k = correct[:k].view(-1).float().sum(0)
         res.append(correct_k.mul_(100.0 / batch_size))
-    return res, pred
+    return res
 
 
 def save_checkpoint(args, state, is_best):
