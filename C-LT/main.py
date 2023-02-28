@@ -284,7 +284,7 @@ def train(train_loader, model, optimizer_a, epoch): # pre-training
         if losses.val > 100:    # if the loss is too big then check the current batch, save images and the scores
             information = 'Epoch: [{0}][{1}/{2}]\tLoss {loss.val:.4f} ({loss.avg:.4f})\tPrec@1 {top1.val:.3f} ({top1.avg:.3f})\ttarget: {target}\tpred: {pred}\n'.format(
                 epoch, i, len(train_loader), loss=losses,top1=top1,target=target, pred=y_f)
-            with open("/home/chengru/github/Longtail_DA-master/info.txt", 'r') as file:
+            with open("/home/chengru/github/Longtail_DA-master/info.txt", 'w') as file:
                 file.write(information)
             # save the problem images
             std = [63.0, 62.1, 66.7]
