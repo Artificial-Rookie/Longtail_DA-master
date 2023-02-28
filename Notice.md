@@ -2,6 +2,8 @@
 
 **check parser parameters: dataset, num_meta, epochs**
 
+**check random crop size in data_utils.py line 26**
+
 **check line 88 whether using full_data**
 
 **check line 220 maximum epoch number**

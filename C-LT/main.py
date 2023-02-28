@@ -22,12 +22,12 @@ from PIL import Image
 
 # parse arguments
 parser = argparse.ArgumentParser(description='Imbalanced Example')
-parser.add_argument('--dataset', default='cifar10', type=str,
+parser.add_argument('--dataset', default='bdd100k', type=str,
                     help='dataset (bdd100k or cifar10 or cifar100)')
 parser.add_argument('--batch-size', type=int, default=32, metavar='N',
                     help='input batch size for training (default: 64)')
 parser.add_argument('--num_classes', type=int, default=10)
-parser.add_argument('--num_meta', type=int, default=10, # the sample number for validation each class
+parser.add_argument('--num_meta', type=int, default=2000, # the sample number for validation each class
                     help='The number of meta data for each class.')
 parser.add_argument('--imb_factor', type=float, default=0.1)        # img_min/img_max
 parser.add_argument('--test-batch-size', type=int, default=100, metavar='N',
@@ -220,7 +220,7 @@ def main():
         if epoch < 200: # 160, default max_epoch is 200, this controls when to start the second stage
         # 160 epochs for the first stage of training, getting better initialization for theta
 
-          train(imbalanced_train_loader, model, optimizer_a,epoch)
+          train(full_train_loader, model, optimizer_a,epoch)
 
         else:
           train_meta(imbalanced_train_loader, validation_loader, model, optimizer_a, epoch)

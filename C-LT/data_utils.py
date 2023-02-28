@@ -23,7 +23,7 @@ def build_dataset(dataset,num_meta):
         transforms.Lambda(lambda x: F.pad(x.unsqueeze(0),
                                           (4, 4, 4, 4), mode='reflect').squeeze()),
         transforms.ToPILImage(),
-        transforms.RandomCrop(40), # 40
+        transforms.RandomCrop(100), # 40
         transforms.RandomHorizontalFlip(),
         transforms.ToTensor(),
         normalize,
