@@ -56,7 +56,7 @@ use_cuda = not args.no_cuda and torch.cuda.is_available()
 torch.manual_seed(args.seed)
 np.random.seed(42)
 random.seed(42)
-device = torch.device("cuda:0" if use_cuda else "cpu")
+device = torch.device("cuda:2" if use_cuda else "cpu")
 
 def set_seed(seed):
     torch.backends.cudnn.deterministic = True
@@ -252,6 +252,9 @@ def train(train_loader, model, optimizer_a, epoch): # pre-training
     top1 = AverageMeter()
     meta_top1 = AverageMeter()
     model.train()
+    # define an old model to protect the model from bad batch
+    old_model = ResNet32(10)
+    old_model.cuda()
 
     weight_eps_class = [0 for _ in range(int(args.num_classes))]
     total_seen_class = [0 for _ in range(int(args.num_classes))]
@@ -260,16 +263,20 @@ def train(train_loader, model, optimizer_a, epoch): # pre-training
         target = torch.tensor([int(x) for x in target])
         target_var = to_var(target, requires_grad=False)
 
-        #meta_model = ResNet32(args.dataset == 'cifar10' and 10 or 100)
-        #meta_model.load_state_dict(model.state_dict())
-
-        #meta_model.cuda()
-
         # Lines 12 - 14 computing for the loss with the computed weights
         # and then perform a parameter update
         y_f = model(input_var)
         cost_w = F.cross_entropy(y_f, target_var, reduce=None)
-        l_f = torch.mean(cost_w) # * w)
+        l_f = torch.mean(cost_w)
+
+        if l_f > 100:
+            del y_f
+            model.load_state_dict(old_model.state_dict())
+            continue
+            # y_f = model(input_var)
+            # cost_w = F.cross_entropy(y_f, target_var, reduce=None)
+            # l_f = torch.mean(cost_w)
+            
         prec_train = accuracy(y_f.data, target_var.data, topk=(1,))[0]
 
         losses.update(l_f.item(), input.size(0))
@@ -277,27 +284,33 @@ def train(train_loader, model, optimizer_a, epoch): # pre-training
         top1.update(prec_train.item(), input.size(0))
         #meta_top1.update(prec_meta.item(), input.size(0))
 
+        # if losses.val > 100:    # if the loss is too big then check the current batch, save images and the scores
+            # information = 'Epoch: [{0}][{1}/{2}]\tLoss {loss.val:.4f} ({loss.avg:.4f})\tPrec@1 {top1.val:.3f} ({top1.avg:.3f})\ttarget: {target}\tpred: {pred}\n'.format(
+            #     epoch, i, len(train_loader), loss=losses,top1=top1,target=target, pred=y_f)
+            # with open("/home/chengru/github/Longtail_DA-master/info.txt", 'w') as file:
+            #     file.write(information)
+            # # save the problem images
+            # std = [63.0, 62.1, 66.7]
+            # mean = [125.3, 123.0, 113.9]
+            # for j in range(len(input)):
+            #     im = input.numpy()[j]
+            #     for k in range(3):
+            #         im[k] = im[k] * std[k] + mean[k]
+            #     im = im * 255
+            #     im = im.astype(np.uint8).transpose(1,2,0)
+            #     im = Image.fromarray(im)
+            #     im.save(f"/home/chengru/github/Longtail_DA-master/output/{j}.jpg")
+            # raise Exception("loss too big")
+        
+        
+        old_model.load_state_dict(model.state_dict())
+
+        # old_batch = input_var.clone()
+        # old_target = target_var.clone()
+
         optimizer_a.zero_grad()
         l_f.backward()
         optimizer_a.step()
-
-        if losses.val > 100:    # if the loss is too big then check the current batch, save images and the scores
-            information = 'Epoch: [{0}][{1}/{2}]\tLoss {loss.val:.4f} ({loss.avg:.4f})\tPrec@1 {top1.val:.3f} ({top1.avg:.3f})\ttarget: {target}\tpred: {pred}\n'.format(
-                epoch, i, len(train_loader), loss=losses,top1=top1,target=target, pred=y_f)
-            with open("/home/chengru/github/Longtail_DA-master/info.txt", 'w') as file:
-                file.write(information)
-            # save the problem images
-            std = [63.0, 62.1, 66.7]
-            mean = [125.3, 123.0, 113.9]
-            for j in range(len(input)):
-                im = input.numpy()[j]
-                for k in range(3):
-                    im[k] = im[k] * std[k] + mean[k]
-                im = im * 255
-                im = im.astype(np.uint8).transpose(1,2,0)
-                im = Image.fromarray(im)
-                im.save(f"/home/chengru/github/Longtail_DA-master/output/{j}.jpg")
-            raise Exception("loss too big")
 
         if i % args.print_freq == 0:
             print('Epoch: [{0}][{1}/{2}]\tLoss {loss.val:.4f} ({loss.avg:.4f})\tPrec@1 {top1.val:.3f} ({top1.avg:.3f})'.format(
