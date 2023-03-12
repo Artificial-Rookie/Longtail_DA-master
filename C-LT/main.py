@@ -85,7 +85,7 @@ full_train_loader = torch.utils.data.DataLoader(
 torch.manual_seed(args.seed)
 classe_labels = range(args.num_classes)
 
-full_data = True    # full_data is true when run the code only using first stage with full dataset, else it's two stage
+full_data = False    # full_data is true when run the code only using first stage with full dataset, else it's two stage
 if args.dataset != "bdd100k":
     if full_data:
         data_list = {}
@@ -217,10 +217,10 @@ def main():
     for epoch in range(args.epochs):
         adjust_learning_rate(optimizer_a, epoch + 1)
 
-        if epoch < 200: # 160, default max_epoch is 200, this controls when to start the second stage
+        if epoch < 160: # 160, default max_epoch is 200, this controls when to start the second stage
         # 160 epochs for the first stage of training, getting better initialization for theta
 
-          train(full_train_loader, model, optimizer_a,epoch)
+          train(imbalanced_train_loader, model, optimizer_a,epoch)
 
         else:
           train_meta(imbalanced_train_loader, validation_loader, model, optimizer_a, epoch)
@@ -255,6 +255,7 @@ def train(train_loader, model, optimizer_a, epoch): # pre-training
     # define an old model to protect the model from bad batch
     old_model = ResNet32(10)
     old_model.cuda()
+    old_loss = 1
 
     weight_eps_class = [0 for _ in range(int(args.num_classes))]
     total_seen_class = [0 for _ in range(int(args.num_classes))]
@@ -269,8 +270,12 @@ def train(train_loader, model, optimizer_a, epoch): # pre-training
         cost_w = F.cross_entropy(y_f, target_var, reduce=None)
         l_f = torch.mean(cost_w)
 
-        if l_f > 100:
-            del y_f
+        if l_f > 10*old_loss:
+            information = 'Epoch: [{0}][{1}/{2}]\tLoss {loss.val:.4f} ({loss.avg:.4f})\tPrec@1 {top1.val:.3f} ({top1.avg:.3f})\ttarget: {target}\tpred: {pred}\n'.format(
+                epoch, i, len(train_loader), loss=losses,top1=top1,target=target, pred=y_f)
+            with open("/home/chengru/github/Longtail_DA-master/info.txt", 'w') as file:
+                file.write(information)
+            del l_f, y_f
             model.load_state_dict(old_model.state_dict())
             continue
             # y_f = model(input_var)
@@ -304,6 +309,7 @@ def train(train_loader, model, optimizer_a, epoch): # pre-training
         
         
         old_model.load_state_dict(model.state_dict())
+        old_loss = l_f
 
         # old_batch = input_var.clone()
         # old_target = target_var.clone()
@@ -348,7 +354,7 @@ def train_meta(train_loader, validation_loader,model,optimizer_a,epoch):
         #weights = weights.unsqueeze(1)
         #weights = weights.repeat(1,args.num_classes)
 
-        meta_model = ResNet32(args.dataset == 'cifar10' and 10 or 100)
+        meta_model = ResNet32(10) # args.dataset == 'cifar10' and 10 or 100
         meta_model.load_state_dict(model.state_dict())
 
         meta_model.cuda()
