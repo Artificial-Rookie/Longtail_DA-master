@@ -1,7 +1,7 @@
 # Rethinking Class-Balanced Methods for Long-Tailed Visual Recognition from a Domain Adaptation Perspective
 [[Arxiv](https://arxiv.org/abs/2003.10780)]
 
-This is PyTorch implementation of the above CVPR 2020 paper.
+This is PyTorch implementation of the above CVPR 2020 paper with another dataset bdd100k.
 
 #### Abstract
 
@@ -13,11 +13,13 @@ PyTorch0.4
 
 ## Dataset
 
-imbalanced CIFAR 10 and 100
+BDD100k
 
 ## Training
 
-To train CIFAR-LT dataset, go C-LT/ folder and run the main.py
+To train, go C-LT/ folder and run the main.py
+
+**Default dataset is bdd100k, check noice.md for more details**
 
 The default loss function is corss entropy loss, dataset options include cifar10 and cifar100 from torchvision. If new dataset is introduced, the imbalance data batches might have to be recreated. For natrually imbalanced datasets, some data processing steps must be modified.
 
