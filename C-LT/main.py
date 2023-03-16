@@ -1,6 +1,6 @@
 import os
 os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
-os.environ["CUDA_VISIBLE_DEVICES"]="1"
+os.environ["CUDA_VISIBLE_DEVICES"]="3"
 
 import time
 import argparse
@@ -17,7 +17,7 @@ import torchvision.transforms as transforms
 from data_utils import *
 from resnet import *
 import shutil
-from data_process import count_data, curation
+from data_process import count_data
 from PIL import Image
 
 # parse arguments
@@ -27,7 +27,7 @@ parser.add_argument('--dataset', default='bdd100k', type=str,
 parser.add_argument('--batch-size', type=int, default=32, metavar='N',
                     help='input batch size for training (default: 64)')
 parser.add_argument('--num_classes', type=int, default=10)
-parser.add_argument('--num_meta', type=int, default=2000, # the sample number for validation each class
+parser.add_argument('--num_meta', type=int, default=200, # the sample number for validation each class
                     help='The number of meta data for each class.')
 parser.add_argument('--imb_factor', type=float, default=0.1)        # img_min/img_max
 parser.add_argument('--test-batch-size', type=int, default=100, metavar='N',
@@ -56,7 +56,7 @@ use_cuda = not args.no_cuda and torch.cuda.is_available()
 torch.manual_seed(args.seed)
 np.random.seed(42)
 random.seed(42)
-device = torch.device("cuda:2" if use_cuda else "cpu")
+device = torch.device("cuda:3" if use_cuda else "cpu")
 
 def set_seed(seed):
     torch.backends.cudnn.deterministic = True
@@ -207,7 +207,7 @@ def main():
     criterion = nn.CrossEntropyLoss().cuda()
 
     # print("=> loading checkpoint")
-    # checkpoint = torch.load('/home/muhammad/Reweighting_samples/Meta-weight-net_class-imbalance-master/checkpoint/ours/ckpt.best.pth.tar', map_location='cuda:0')
+    # checkpoint = torch.load('/home/chengru/github/Longtail_DA-master/model/ckpt.best.pth.tar', map_location=device)
     # args.start_epoch = checkpoint['epoch']
     # best_acc1 = checkpoint['best_acc1']
     # model.load_state_dict(checkpoint['state_dict'])
@@ -216,15 +216,24 @@ def main():
 
     for epoch in range(args.epochs):
         adjust_learning_rate(optimizer_a, epoch + 1)
-
         if epoch < 160: # 160, default max_epoch is 200, this controls when to start the second stage
         # 160 epochs for the first stage of training, getting better initialization for theta
 
-          train(imbalanced_train_loader, model, optimizer_a,epoch)
-
+            train(imbalanced_train_loader, model, optimizer_a,epoch)
+            # torch.save({
+            #     'epoch': epoch+1,
+            #     'model_state_dict': model.state_dict(),
+            #     'optimizer_state_dict': optimizer_a.state_dict()
+            # }, '/home/chengru/github/Longtail_DA-master/model/model_state_dict'+str(epoch)+'.pth')
+            # torch.save(model,'/home/chengru/github/Longtail_DA-master/model/model'+str(epoch)+'.pkl')
         else:
-          train_meta(imbalanced_train_loader, validation_loader, model, optimizer_a, epoch)
-
+            train_meta(imbalanced_train_loader, validation_loader, model, optimizer_a, epoch)
+            # torch.save({
+            #     'epoch': epoch+1,
+            #     'model_state_dict': model.state_dict(),
+            #     'optimizer_state_dict': optimizer_a.state_dict()
+            # }, '/home/chengru/github/Longtail_DA-master/model/model_state_dict'+str(epoch)+'.pth')
+            # torch.save(model,'/home/chengru/github/Longtail_DA-master/model/model'+str(epoch)+'.pkl')
        
         #tr_prec1, tr_preds, tr_gt_labels = validate(imbalanced_train_loader, model, criterion, epoch)
         # evaluate on validation set
@@ -233,13 +242,13 @@ def main():
         # remember best prec@1 and save checkpoint
         is_best = prec1 > best_prec1
         best_prec1 = max(prec1, best_prec1)
-
-        #save_checkpoint(args, {
-         #   'epoch': epoch + 1,
-         #   'state_dict': model.state_dict(),
-         #   'best_acc1': best_prec1,
-         #   'optimizer' : optimizer_a.state_dict(),
-        #}, is_best)
+        if (epoch+1)%10 == 0: # save checkpoint every 10 steps
+            save_checkpoint(args, {
+            'epoch': epoch + 1,
+            'state_dict': model.state_dict(),
+            'best_acc1': best_prec1,
+            'optimizer' : optimizer_a.state_dict(),
+            }, is_best,epoch)
 
     print('Best accuracy: ', best_prec1)
 
@@ -278,9 +287,6 @@ def train(train_loader, model, optimizer_a, epoch): # pre-training
             del l_f, y_f
             model.load_state_dict(old_model.state_dict())
             continue
-            # y_f = model(input_var)
-            # cost_w = F.cross_entropy(y_f, target_var, reduce=None)
-            # l_f = torch.mean(cost_w)
             
         prec_train = accuracy(y_f.data, target_var.data, topk=(1,))[0]
 
@@ -445,6 +451,8 @@ def validate(val_loader, model, criterion, epoch):
     preds = []
 
     end = time.time()
+    # writer = SummaryWriter('./logdir')
+
     for i, (input, target) in enumerate(val_loader):
         target = target.cuda()#async=True)
         input = input.cuda()
@@ -462,7 +470,7 @@ def validate(val_loader, model, criterion, epoch):
         true_labels += list(target_var.data.cpu().numpy())
         preds += preds_output
 
-
+        
         # measure accuracy and record loss
         prec1 = accuracy(output.data, target, topk=(1,))[0]
         losses.update(loss.data.item(), input.size(0))
@@ -479,8 +487,19 @@ def validate(val_loader, model, criterion, epoch):
                   'Prec@1 {top1.val:.3f} ({top1.avg:.3f})'.format(
                 i, len(val_loader), batch_time=batch_time, loss=losses,
                 top1=top1))
-
+    
+    acc = {f'{i}':0 for i in range(10)}
+    cnt = {f'{i}':0 for i in range(10)}
+    for label,pred in zip(true_labels,preds):
+        cnt[str(label)] += 1
+        if pred == label:
+            acc[str(label)] += 1
+    for cls in acc.keys():
+        acc[cls] = acc[cls]/cnt[cls]
+    print("Acc each cls:",acc)
+    
     print(' * Prec@1 {top1.avg:.3f}'.format(top1=top1))
+
     # log to TensorBoard
     # import pdb; pdb.set_trace()
 
@@ -563,12 +582,12 @@ def accuracy(output, target, topk=(1,)):
     return res
 
 
-def save_checkpoint(args, state, is_best):
+def save_checkpoint(args, state, is_best, epoch):
     
-    filename = '%s/%s/ckpt.pth.tar' % ('checkpoint', 'ours')
+    filename = f"/home/chengru/github/Longtail_DA-master/model/ckpt_{epoch}.pth.tar"  # '%s/%s/ckpt.pth.tar' % ('checkpoint', 'ours')
     torch.save(state, filename)
     if is_best:
-        shutil.copyfile(filename, filename.replace('pth.tar', 'best.pth.tar'))
+        shutil.copyfile(filename, filename.replace(f'ckpt_{epoch}.pth.tar', 'best.pth.tar'))
 
 if __name__ == '__main__':
     main()

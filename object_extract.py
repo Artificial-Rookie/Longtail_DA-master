@@ -1,12 +1,12 @@
 import json
 import os
-from collections import defaultdict
-import matplotlib.pyplot as plt
+# from collections import defaultdict
+# import matplotlib.pyplot as plt
 import PIL.Image as Image
 import numpy as np
 
-def get_obj(path="/home/chengru/github/Longtail_DA-master/bdd100k_ori/", out_dir="/home/chengru/github/Longtail_DA-master/bdd100k/val/"):
-    with open(path+"val_day.json") as js:
+def get_obj(path="/home/chengru/github/Longtail_DA-master/bdd100k_ori/", out_dir="/home/chengru/github/Longtail_DA-master/bdd100k/val_night/"): #################
+    with open(path+"val_night.json") as js: ######################################
         temp = json.load(js)
         images = temp["images"]
         annot = temp["annotations"]
@@ -17,7 +17,7 @@ def get_obj(path="/home/chengru/github/Longtail_DA-master/bdd100k_ori/", out_dir
 
     objects = []   # store the objects for each class
     for ann in annot:
-        file_path = path+"test_day/"+id2img[ann["image_id"]]
+        file_path = path+"test_night/"+id2img[ann["image_id"]]  ##################
         bbox = ann["bbox"]   # bounding box of the object
         cat = ann["category_id"]
         id = ann["id"]
