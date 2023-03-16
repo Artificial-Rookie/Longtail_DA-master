@@ -496,7 +496,7 @@ def validate(val_loader, model, criterion, epoch):
             acc[str(label)] += 1
     for cls in acc.keys():
         acc[cls] = acc[cls]/cnt[cls]
-    print("Acc each cls:",acc)
+    print("Acc each cls:",acc)  # accuracy for each class
     
     print(' * Prec@1 {top1.avg:.3f}'.format(top1=top1))
 
