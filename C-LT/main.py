@@ -498,7 +498,7 @@ def validate(val_loader, model, criterion, epoch):
         acc[cls] = acc[cls]/cnt[cls]*100
         acc[cls] = round(acc[cls],2)
     print("Acc each cls: {}", acc)  # accuracy for each class
-    with open('/home/chengru/github/Longtail_DA-master/results.txt', 'w') as file:
+    with open('/home/chengru/github/Longtail_DA-master/results.txt', 'a') as file:
         file.write(f"Epoch: {epoch}\n")
         for cls in acc.keys():
             file.write(f"{cls}:{acc[cls]};\t")
