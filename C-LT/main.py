@@ -495,8 +495,14 @@ def validate(val_loader, model, criterion, epoch):
         if pred == label:
             acc[str(label)] += 1
     for cls in acc.keys():
-        acc[cls] = acc[cls]/cnt[cls]
-    print("Acc each cls:",acc)  # accuracy for each class
+        acc[cls] = acc[cls]/cnt[cls]*100
+        acc[cls] = round(acc[cls],2)
+    print("Acc each cls: {}", acc)  # accuracy for each class
+    with open('/home/chengru/github/Longtail_DA-master/results.txt', 'w') as file:
+        file.write(f"Epoch: {epoch}\n")
+        for cls in acc.keys():
+            file.write(f"{cls}:{acc[cls]};\t")
+        file.write("\n")
     
     print(' * Prec@1 {top1.avg:.3f}'.format(top1=top1))
 
