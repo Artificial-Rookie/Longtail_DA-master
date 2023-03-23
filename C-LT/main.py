@@ -56,7 +56,7 @@ use_cuda = not args.no_cuda and torch.cuda.is_available()
 torch.manual_seed(args.seed)
 np.random.seed(42)
 random.seed(42)
-device = torch.device("cuda:3" if use_cuda else "cpu")
+device = torch.device("cuda:2" if use_cuda else "cpu")
 
 def set_seed(seed):
     torch.backends.cudnn.deterministic = True
@@ -84,7 +84,7 @@ full_train_loader = torch.utils.data.DataLoader(
 # make imbalanced data
 torch.manual_seed(args.seed)
 classe_labels = range(args.num_classes)
-
+###################################################################
 full_data = False    # full_data is true when run the code only using first stage with full dataset, else it's two stage
 if args.dataset != "bdd100k":
     if full_data:
@@ -206,34 +206,23 @@ def main():
     # define loss function (criterion) and optimizer
     criterion = nn.CrossEntropyLoss().cuda()
 
-    # print("=> loading checkpoint")
-    # checkpoint = torch.load('/home/chengru/github/Longtail_DA-master/model/ckpt.best.pth.tar', map_location=device)
-    # args.start_epoch = checkpoint['epoch']
-    # best_acc1 = checkpoint['best_acc1']
-    # model.load_state_dict(checkpoint['state_dict'])
-    # optimizer_a.load_state_dict(checkpoint['optimizer'])
-    # print("=> loaded checkpoint")
+    epoch = 0
 
-    for epoch in range(args.epochs):
+    print("=> loading checkpoint")
+    checkpoint = torch.load('/home/chengru/github/Longtail_DA-master/model/ckpt_159.pth.tar', map_location=device)
+    epoch = checkpoint['epoch'] # args.start_epoch
+    best_acc1 = checkpoint['best_acc1']
+    model.load_state_dict(checkpoint['state_dict'])
+    optimizer_a.load_state_dict(checkpoint['optimizer'])
+    print("=> loaded checkpoint")
+
+    while epoch < args.epochs:
         adjust_learning_rate(optimizer_a, epoch + 1)
         if epoch < 160: # 160, default max_epoch is 200, this controls when to start the second stage
         # 160 epochs for the first stage of training, getting better initialization for theta
-
             train(imbalanced_train_loader, model, optimizer_a,epoch)
-            # torch.save({
-            #     'epoch': epoch+1,
-            #     'model_state_dict': model.state_dict(),
-            #     'optimizer_state_dict': optimizer_a.state_dict()
-            # }, '/home/chengru/github/Longtail_DA-master/model/model_state_dict'+str(epoch)+'.pth')
-            # torch.save(model,'/home/chengru/github/Longtail_DA-master/model/model'+str(epoch)+'.pkl')
         else:
             train_meta(imbalanced_train_loader, validation_loader, model, optimizer_a, epoch)
-            # torch.save({
-            #     'epoch': epoch+1,
-            #     'model_state_dict': model.state_dict(),
-            #     'optimizer_state_dict': optimizer_a.state_dict()
-            # }, '/home/chengru/github/Longtail_DA-master/model/model_state_dict'+str(epoch)+'.pth')
-            # torch.save(model,'/home/chengru/github/Longtail_DA-master/model/model'+str(epoch)+'.pkl')
        
         #tr_prec1, tr_preds, tr_gt_labels = validate(imbalanced_train_loader, model, criterion, epoch)
         # evaluate on validation set
@@ -249,7 +238,7 @@ def main():
             'best_acc1': best_prec1,
             'optimizer' : optimizer_a.state_dict(),
             }, is_best,epoch)
-
+    epoch += 1
     print('Best accuracy: ', best_prec1)
 
 
