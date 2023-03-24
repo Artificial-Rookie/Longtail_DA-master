@@ -51,7 +51,7 @@ def build_dataset(dataset,num_meta):
         train_dataset = ImageFolder(root="/home/chengru/github/Longtail_DA-master/bdd100k/train/",transform=transform_train)
         # class starts from 0
         # train_dataset[0][0] is image, train_dataset[0][1] is the label for the image
-        test_dataset = ImageFolder(root="/home/chengru/github/Longtail_DA-master/bdd100k/val/",transform=transform_test)
+        test_dataset = ImageFolder(root="/home/chengru/github/Longtail_DA-master/bdd100k/val_night/",transform=transform_test)
         _, num_each = count_data(path="/home/chengru/github/Longtail_DA-master/bdd100k/train_day.json")
         num_classes = 10
         img_num_list = [num_meta] * 10
