@@ -1,6 +1,6 @@
 import os
-os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
-os.environ["CUDA_VISIBLE_DEVICES"]="3"
+# os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
+# os.environ["CUDA_VISIBLE_DEVICES"]="3"
 
 import time
 import argparse
@@ -56,8 +56,9 @@ use_cuda = not args.no_cuda and torch.cuda.is_available()
 torch.manual_seed(args.seed)
 np.random.seed(42)
 random.seed(42)
-device = torch.device("cuda:2" if use_cuda else "cpu")
-
+###############################################
+device = torch.device("cuda:0" if use_cuda else "cpu")
+###############################################
 def set_seed(seed):
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
@@ -209,7 +210,7 @@ def main():
     epoch = 0
 
     print("=> loading checkpoint")
-    checkpoint = torch.load('/home/chengru/github/Longtail_DA-master/model/ckpt_159.pth.tar', map_location=device)
+    checkpoint = torch.load('/home/chengru/github/Longtail_DA-master/model_night/ckpt_159.pth.tar', map_location=device)
     epoch = checkpoint['epoch'] # args.start_epoch
     best_acc1 = checkpoint['best_acc1']
     model.load_state_dict(checkpoint['state_dict'])

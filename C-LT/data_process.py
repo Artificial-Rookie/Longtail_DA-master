@@ -1,6 +1,7 @@
 import json
 import copy
 import numpy as np
+import matplotlib.pyplot as plt
 
 def count_data(path="/home/chengru/github/Longtail_DA-master/bdd100k_ori/train_day.json"):
     with open(path) as js:
@@ -52,3 +53,9 @@ def curation(train_dataset, img_num_list, num_classes, keep_rate):
     imbalanced_train_data.targets = np.delete(train_dataset.targets, idx_to_train, axis=0)
 
     return imbalanced_train_data
+
+if __name__ == "__main__":
+    _,num = count_data()
+    print(num)
+    res = {i:num[i] for i in range(len(num))}
+    temp = sorted(num)
