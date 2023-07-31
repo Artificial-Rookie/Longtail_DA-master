@@ -1,4 +1,4 @@
-# Rethinking Class-Balanced Methods for Long-Tailed Visual Recognition from a Domain Adaptation Perspective
+# Implementation & Modification of the Paper Rethinking Class-Balanced Methods for Long-Tailed Visual Recognition from a Domain Adaptation Perspective
 [[Arxiv](https://arxiv.org/abs/2003.10780)]
 
 This is PyTorch implementation of the above CVPR 2020 paper with another dataset bdd100k.
@@ -13,7 +13,7 @@ PyTorch0.4
 
 ## Dataset
 
-BDD100k
+BDD100k, CIFAR10
 
 ## Training
 
@@ -29,22 +29,3 @@ e.g. to train CIFAR10-LT with an imabalance factor of 200, run
 python main.py --dataset cifar10 --num_classes 10 --imb_factor 0.005
 
 ```
-
-If you find this code useful, consider citing our work:
-```
-@article{JamalLongtail_DA,
-  author    = {Muhammad Abdullah Jamal and
-               Matthew Brown and
-               Ming{-}Hsuan Yang and
-               Liqiang Wang and
-               Boqing Gong},
-  title     = {Rethinking Class-Balanced Methods for Long-Tailed Visual Recognition
-               from a Domain Adaptation Perspective},
-  journal   = {CoRR},
-  volume    = {abs/2003.10780},
-  year      = {2020},
-  url       = {https://arxiv.org/abs/2003.10780},
-}
-```
-
-
